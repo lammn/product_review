@@ -62,7 +62,9 @@ class UnitTest extends AbstractAdminWebTestCase
         try{
             $test_review_id = $this->get_test_review_id($this->TestReview);
             $this->reviewAdminEditForm($test_review_id, 1);
+            var_dump($this->TestReview->getProduct()->getId());
             $crawler = $this->getProductDetailCrawler($this->TestReview->getProduct()->getId());
+            die();
             $crawler->filter('.review_list')->text();
             $this->assertTrue(true);
         }catch(\InvalidArgumentException $e){
