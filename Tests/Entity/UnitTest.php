@@ -8,12 +8,14 @@ use Plugin\ProductReview\Entity\ProductReview;
 class UnitTest extends AbstractAdminWebTestCase
 {
     protected  $TestReview;
+    protected  $test_review_id;
 
     public function setup()
     {
         parent::setUp();
         $faker = $this->getFaker();
         $this->TestReview = $this->createReview(0, $faker->word, 1);
+        $this->test_review_id = $this->TestReview->getId();
     }
     /**
      * レビュー検索画面のルーティング
@@ -32,10 +34,8 @@ class UnitTest extends AbstractAdminWebTestCase
      */
     public function test_routing_review_edit()
     {
-
-        $test_review_id = $this->get_test_review_id($this->TestReview);
         $crawler = $this->client->request('GET',
-            $this->app->url('admin_product_review_edit', array('id' => $test_review_id))
+            $this->app->url('admin_product_review_edit', array('id' => $this->test_review_id))
         );
         $this->assertTrue($this->client->getResponse()->isSuccessful());
     }
@@ -46,8 +46,7 @@ class UnitTest extends AbstractAdminWebTestCase
      */
     public function test_review_edit()
     {
-        $test_review_id = $this->get_test_review_id($this->TestReview);
-        $formData = $this->reviewAdminEditForm($test_review_id, 1);
+        $formData = $this->reviewAdminEditForm(1);
         $this->assertTrue($this->client->getResponse()->isRedirect($this->app->url('admin_product_review')));
         $this->expected = $formData['reviewer_name'];
         $this->actual = $this->TestReview->getReviewerName();
@@ -60,8 +59,7 @@ class UnitTest extends AbstractAdminWebTestCase
     public function test_review_public()
     {
         try{
-            $test_review_id = $this->get_test_review_id($this->TestReview);
-            $this->reviewAdminEditForm($test_review_id, 1);
+            $this->reviewAdminEditForm(1);
             $crawler = $this->getProductDetailCrawler($this->TestReview->getProduct()->getId());
             $crawler->filter('.review_list')->text();
             $this->assertTrue(true);
@@ -76,8 +74,7 @@ class UnitTest extends AbstractAdminWebTestCase
     public function test_review_not_public()
     {
         try{
-            $test_review_id = $this->get_test_review_id($this->TestReview);
-            $this->reviewAdminEditForm($test_review_id, 2);
+            $this->reviewAdminEditForm(2);
             $crawler = $this->getProductDetailCrawler($this->TestReview->getProduct()->getId());
             $crawler->filter('.review_list')->text();
             $this->assertTrue(false);
@@ -124,18 +121,18 @@ class UnitTest extends AbstractAdminWebTestCase
     /**
      * 商品レビューAdmin確認画面
      */
-    public function reviewAdminEditForm($test_review_id, $status)
+    public function reviewAdminEditForm($status)
     {
         $formData = $this->createReviewFormData($status);
-        $ProductReview = $this->app['eccube.plugin.product_review.repository.product_review']->find($test_review_id);
         $crawler = $this->client->request(
             'POST',
-            $this->app->url('admin_product_review_edit', array('id' => $test_review_id)),
+            $this->app->url('admin_product_review_edit', array('id' => $this->test_review_id)),
             array(
                 'admin_product_review' => $formData,
-                'Product' => $ProductReview->getProduct()
+                'Product' => $this->TestReview->getProduct()
             )
         );
+
         return $formData;
     }
 
@@ -156,18 +153,6 @@ class UnitTest extends AbstractAdminWebTestCase
         );
     }
 
-    /**
-     * 商品レビューのIDを取得
-     */
-    public function get_test_review_id($TestReview)
-    {
-        $test_review_id = $this->app['eccube.plugin.product_review.repository.product_review']
-            ->findOneBy(array(
-                'reviewer_name' => $TestReview->getReviewerName()
-            ))
-            ->getId();
-        return $test_review_id;
-    }
     /**
      * レビューフォームの作成
      */
@@ -226,7 +211,7 @@ class UnitTest extends AbstractAdminWebTestCase
             ->setProduct($Product)
             ->setStatus($Disp);
         $this->app['orm.em']->persist($Review);
-        $this->app['orm.em']->flush();
+        $this->app['orm.em']->flush($Review);
         return $Review;
     }
 
